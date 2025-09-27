@@ -1,0 +1,108 @@
+📦 Entrega – Express + Mongoose
+🚀 Requisitos
+
+Node.js 18+
+
+Acceso a MongoDB Atlas (se entregan credenciales de prueba por fuera del repo)
+
+Cliente REST (Insomnia)
+
+⚙️ Configuración
+
+Clonar este repositorio:
+
+git clone <URL_DEL_REPO>
+cd <CARPETA>
+
+
+Instalar dependencias:
+
+npm install
+
+
+Crear un archivo .env copiando el formato de .env.example:
+
+.env.example
+
+PORT=8080
+MONGO_URI=mongodb+srv://<USER>:<PASSWORD>@cluster0.zcaes0j.mongodb.net/class-zero?retryWrites=true&w=majority&appName=Cluster0
+JWT_SECRET=<JWT_SECRET>
+JWT_EXPIRES_IN=1d
+
+
+⚠️ Reemplazar <USER> y <PASSWORD> por las credenciales que se entregan junto con la entrega (no están en el repo).
+
+▶️ Ejecución
+
+Modo desarrollo:
+
+npm run dev
+
+
+Producción:
+
+npm start
+
+
+Servidor por defecto: 👉 http://localhost:8080
+
+🧪 Probar con Insomnia
+
+Este repo incluye un archivo de colección:
+insomnia_test/entrega1_insomnia.yaml
+
+Importar en Insomnia:
+
+Abrir Insomnia.
+
+Ir a Application → Preferences → Data → Import Data.
+
+Seleccionar From File y elegir insomnia_test/entrega1_insomnia.yaml.
+
+Listo ✅: ya tendrás todos los requests configurados (createUser, loginUser, etc.).
+
+👤 Usuarios de prueba (API)
+
+Para probar autenticación y JWT:
+
+User 1
+
+email: chofi@c.com
+
+password: chofi
+
+User 2
+
+email: m@m.com
+
+password: chaca
+
+📌 Endpoints principales
+
+POST /api/users → Crear usuario
+
+GET /api/users → Listar usuarios
+
+GET /api/users/:id → Obtener usuario por ID
+
+PUT /api/users/:id → Actualizar usuario
+
+DELETE /api/users/:id → Eliminar usuario
+
+POST /api/auth/login → Login (devuelve JWT)
+
+📖 Consigna
+
+Conectarse a MongoDB Atlas con DB class-zero vía Mongoose.
+
+Modelo userModel.js en colección users con:
+
+name: string, required
+
+age: number, required
+
+email: string, required, unique
+
+Router userRouter.js en /api/users con CRUD asíncrono.
+
+Verificación con Insomnia/Postman.
