@@ -4,7 +4,9 @@ import passport from 'passport';
 import userRouter from './routes/user.route.js';
 import sessionRouter from './routes/session.route.js';
 import productRouter from './routes/product.route.js';
+import cartRouter from "./routes/cart.route.js";
 import morgan from 'morgan';
+import nodemailer from 'nodemailer';
  
 
 const app= express();
@@ -19,6 +21,7 @@ app.use(passport.initialize());
 app.use("/api/sessions", sessionRouter);
 app.use("/api/users", userRouter);
 app.use("/api/products", productRouter);
+app.use("/api/carts", cartRouter);
 
 app.get("/ping", (req, res) => {
   res.json({ message: "pong" });

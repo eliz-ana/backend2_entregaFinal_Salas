@@ -1,108 +1,160 @@
-📦 Entrega – Express + Mongoose
+🛒 Ecommerce API – Express + Mongoose
+
+Back-end con capas profesionales: Controllers → Services → Repositories → DAOs → Models.
+Incluye autenticación JWT, roles (admin/user), carritos, compra con tickets y recupero de contraseña por email (token 1h).
+
 🚀 Requisitos
 
 Node.js 18+
-
-Acceso a MongoDB Atlas (se entregan credenciales de prueba por fuera del repo)
-
-Cliente REST (Insomnia)
+MongoDB Atlas
+Cliente REST (Insomnia / Postman)
 
 ⚙️ Configuración
 
-Clonar este repositorio:
+Clonar e instalar:
 
 git clone <URL_DEL_REPO>
 cd <CARPETA>
-
-
-Instalar dependencias:
-
 npm install
 
 
-Crear un archivo .env copiando el formato de .env.example:
-
-.env.example
+Variables de entorno
+Copiá .env.example a .env y completá valores:
 
 PORT=8080
-MONGO_URI=mongodb+srv://<USER>:<PASSWORD>@cluster0.zcaes0j.mongodb.net/class-zero?retryWrites=true&w=majority&appName=Cluster0
-JWT_SECRET=<JWT_SECRET>
+NODE_ENV=development
+
+MONGO_URI=mongodb+srv://<USER>:<PASSWORD>@cluster0.zcaes0j.mongodb.net/class_zero?retryWrites=true&w=majority&appName=Cluster0
+
+JWT_SECRET=<CLAVE_SECRETA>
 JWT_EXPIRES_IN=1d
 
+APP_BASE_URL=http://localhost:8080
 
-⚠️ Reemplazar <USER> y <PASSWORD> por las credenciales que se entregan junto con la entrega (no están en el repo).
+# Mailtrap (Email Sandbox)
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USER=<MAILTRAP_USER>
+MAIL_PASS=<MAILTRAP_PASS>
 
-▶️ Ejecución
 
-Modo desarrollo:
 
+Ejecutar
+
+# modo dev
 npm run dev
 
-
-Producción:
-
+# producción
 npm start
 
 
-Servidor por defecto: 👉 http://localhost:8080
+Servidor: http://localhost:8080
 
-🧪 Probar con Insomnia
+🧱 Arquitectura
+src/
+  config/        (passport, db)
+  controllers/   (lógica HTTP)
+  services/      (lógica de negocio: purchase, password reset, mail)
+  repositories/  (patrón Repository)
+  dao/           (acceso a datos)
+  models/        (Mongoose)
+  middlewares/   (auth/roles/validaciones)
+  routes/        (routers)
 
-Este repo incluye un archivo de colección:
-insomnia_test/entrega1_insomnia.yaml
+🔐 Autenticación & Autorización
 
-Importar en Insomnia:
+JWT vía passport-jwt (estrategia current) con cookie authToken o Bearer.
 
-Abrir Insomnia.
+Roles:
 
-Ir a Application → Preferences → Data → Import Data.
+admin: puede crear/editar/eliminar products.
+user: puede operar su cart y comprar.
 
-Seleccionar From File y elegir insomnia_test/entrega1_insomnia.yaml.
+/api/sessions/current devuelve un DTO sin datos sensibles.
 
-Listo ✅: ya tendrás todos los requests configurados (createUser, loginUser, etc.).
+🧪 Insomnia
 
-👤 Usuarios de prueba (API)
+Se incluye colección en insomnia_test.
+Flujo típico:
 
-Para probar autenticación y JWT:
+Registrar o login → copiar token
+Probar endpoints protegidos usando Bearer o la cookie authToken.
 
-User 1
+# Importante se comparten credenciales SMTP para Mailtrap por privado
 
-email: chofi@c.com
+### Cómo probar reset de contraseña
+📌 Endpoints
+Sessions
 
-password: chofi
+1) POST /api/sessions/forgot  { "email": "<usuario_existente>" }
+2) Revisar Mailtrap (Sandbox) y abrir el mail → copiar `token` del botón.
+3) POST /api/sessions/reset  { "email": "<mismo_email>", "token": "<TOKEN>", "newPassword": "NuevaPass!123" }
+4) Volver a loguear con la nueva contraseña (la anterior debe fallar).
+5) Reintentar el mismo token → 401 (token usado/expirado en 1h).
 
-User 2
 
-email: m@m.com
+body: { "email": "..." } → responde 200 siempre
 
-password: chaca
+POST /api/sessions/reset – aplica nueva contraseña (no permite repetir)
 
-📌 Endpoints principales
+body: { "email": "...", "token": "...", "newPassword": "..." }
 
-POST /api/users → Crear usuario
+Users (ejemplos)
 
-GET /api/users → Listar usuarios
+GET /api/users – listar (sin password)
+GET /api/users/:uid – detalle (sin password)
+POST /api/users – crear
+PUT /api/users/:uid – actualizar (normaliza email y re-hashea si cambia pass)
+DELETE /api/users/:uid – eliminar
 
-GET /api/users/:id → Obtener usuario por ID
+Internamente: Repository + DAO con proyección -password donde corresponde.
 
-PUT /api/users/:id → Actualizar usuario
+Products
 
-DELETE /api/users/:id → Eliminar usuario
+GET /api/products – público
+GET /api/products/:pid – público
+POST /api/products – admin
+PUT /api/products/:pid – admin
+DELETE /api/products/:pid – admin
 
-POST /api/auth/login → Login (devuelve JWT)
+Carts
 
-📖 Consigna
+POST /api/carts – user (crea carrito para el user actual)
+GET /api/carts/:cid?populated=true – user
+POST /api/carts/:cid/product/:pid – user (agrega/incrementa)
+PUT /api/carts/:cid/product/:pid – user (setea quantity)
+DELETE /api/carts/:cid/product/:pid – user (remueve item)
+DELETE /api/carts/:cid – user (vacía)
 
-Conectarse a MongoDB Atlas con DB class-zero vía Mongoose.
+POST /api/carts/:cid/purchase – user
+Procesa compra: descuenta stock donde alcanza, genera Ticket y deja en el carrito los pendientes. Respuesta:
 
-Modelo userModel.js en colección users con:
+{ "ticket": { "code": "...", "amount": 1234, "purchaser": "email" }, "unprocessedProducts": ["<pid>", ...] }
 
-name: string, required
+🎫 Ticket
 
-age: number, required
+Modelo tickets: { code, purchase_datetime, amount, purchaser }.
+Se crea en /purchase si hubo productos con stock suficiente.
 
-email: string, required, unique
+✉️ Recuperación de contraseña (detalle)
 
-Router userRouter.js en /api/users con CRUD asíncrono.
+/forgot genera token aleatorio, guarda hash SHA-256 + expiresAt=now+1h, y envía email (Mailtrap Sandbox).
+/reset valida token (hash y vencimiento), evita repetir la contraseña actual, actualiza el hash y marca el token como usado.
 
-Verificación con Insomnia/Postman.
+✅ Criterios de la entrega (cumplidos)
+
+DAO + DTO en persistencia (password no expuesta).
+
+Patrón Repository separando negocio y datos.
+
+Middleware de autorización por rol + estrategia current.
+
+Modelo Ticket + lógica de compra (stock, tickets, compras parciales).
+
+Arquitectura profesional y variables de entorno.
+
+Recupero de contraseña con mail, expiración 1h y “no repetir”.
+
+🩺 Healthcheck
+
+GET /health (si está en el repo) para verificar que el server está arriba.
